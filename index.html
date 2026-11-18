@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>[냠냠 퀘스트] 디저트테이블냠냠&amp;과일 마곡점 메뉴 선정</title>
+  <meta name="description" content="디저트테이블냠냠&과일 마곡점 — 도트 게임 형식 메뉴 선정 (음료 1개 + 디저트 1·2순위)" />
+  <meta property="og:title" content="🍓 [냠냠 퀘스트] 디저트테이블냠냠&과일 마곡점 메뉴 고르기" />
+  <meta property="og:description" content="이름을 입력하고 음료 1개 + 디저트(1순위·2순위)를 골라주세요!" />
+  <meta property="og:type" content="website" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍓</text></svg>" />
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body class="modal-locked">
+  <div class="app-shell">
+    <!-- 상단 아케이드 HUD 헤더 -->
+    <header class="top-hud pixel-box">
+      <div class="brand-title-wrap">
+        <span class="pixel-logo-badge">8-BIT</span>
+        <div>
+          <h1 class="brand-title">디저트테이블냠냠&amp;과일 마곡점</h1>
+          <p class="brand-sub">음료 1개 + 디저트 1·2순위 선택 퀘스트</p>
+        </div>
+      </div>
+      <div class="hud-actions">
+        <button type="button" id="btnToggleSfx" class="pixel-btn pixel-btn-sm">
+          🔊 효과음 ON
+        </button>
+        <button type="button" id="btnJumpBoard" class="pixel-btn pixel-btn-sm pixel-btn-gold">
+          📊 현황판 (<span id="hudOrderCount">0</span>명)
+        </button>
+        <button type="button" id="btnOpenSheetModal" class="pixel-btn pixel-btn-sm">
+          ⚙️ 시트연동
+        </button>
+      </div>
+    </header>
+
+    <!-- 배달의민족 앱 매장 바로가기 상단 고정 배너 -->
+    <a
+      id="baeminTopBanner"
+      href="https://s.baemin.com/bK000vefFFRgd"
+      target="_blank"
+      rel="noopener noreferrer"
+      class="baemin-banner"
+    >
+      <div class="baemin-banner-left">
+        <span class="baemin-badge-pill">배달의민족</span>
+        <span class="baemin-banner-text">'디저트테이블냠냠&amp;과일 마곡점' 메뉴 사진 앱에서 보기</span>
+      </div>
+      <span class="baemin-banner-arrow">열기 ▶</span>
+    </a>
+
+    <!-- 8비트 도트 카페 캔버스 스테이지 -->
+    <div class="stage-screen-wrap">
+      <canvas id="cafeCanvas" aria-label="8비트 도트 카페 캐릭터 스테이지"></canvas>
+      <div id="canvasStageLabel" class="canvas-overlay-tag">STEP 1/4 · 음료 1개 선택</div>
+    </div>
+
+    <!-- 점장 NPC 가이드 대사창 -->
+    <section class="npc-dialog" aria-live="polite">
+      <div class="npc-avatar" aria-hidden="true">
+        🍓
+        <span>점장NPC</span>
+      </div>
+      <div class="npc-text-area">
+        <div id="npcNameTag" class="npc-name-tag">▶ 점장 냠냠의 가이드</div>
+        <p class="npc-message">
+          <span id="npcMessageText">이름을 입력하고 상점에 입장해 주세요!</span>
+          <span class="blink-cursor">▼</span>
+        </p>
+      </div>
+    </section>
+
+    <!-- 4단계 퀘스트 스텝 바 -->
+    <nav class="quest-stepper" aria-label="메뉴 선택 단계">
+      <button type="button" id="stepPill1" class="step-pill active" data-step="1">
+        <span class="step-num">STEP 1</span>
+        🥤 음료 1개
+      </button>
+      <button type="button" id="stepPill2" class="step-pill" data-step="2">
+        <span class="step-num">STEP 2</span>
+        🥇 디저트 1순위
+      </button>
+      <button type="button" id="stepPill3" class="step-pill" data-step="3">
+        <span class="step-num">STEP 3</span>
+        🥈 디저트 2순위
+      </button>
+      <button type="button" id="stepPill4" class="step-pill" data-step="4">
+        <span class="step-num">STEP 4</span>
+        📜 최종 확인
+      </button>
+    </nav>
+
+    <!-- 내 선택 인벤토리 요약 슬롯 (2x2 모바일 그리드) -->
+    <div class="inventory-bar" aria-label="내 선택 인벤토리">
+      <div id="slotHero" class="inv-slot" title="탭하여 이름 변경">
+        <span class="inv-label"><span>👤 주문자</span><span class="inv-edit-hint">변경</span></span>
+        <span id="invHeroVal" class="inv-value empty">미입력</span>
+      </div>
+      <div id="slotDrink" class="inv-slot" data-goto="1" title="탭하여 음료 변경">
+        <span class="inv-label"><span>🥤 음료 (1개)</span></span>
+        <span id="invDrinkVal" class="inv-value empty">미선택</span>
+      </div>
+      <div id="slotDessert1" class="inv-slot" data-goto="2" title="탭하여 디저트 1순위 변경">
+        <span class="inv-label"><span>🥇 디저트 1순위</span></span>
+        <span id="invDessert1Val" class="inv-value empty">미선택</span>
+      </div>
+      <div id="slotDessert2" class="inv-slot" data-goto="3" title="탭하여 디저트 2순위 변경">
+        <span class="inv-label"><span>🥈 디저트 2순위</span></span>
+        <span id="invDessert2Val" class="inv-value empty">미선택</span>
+      </div>
+    </div>
+
+    <!-- ==================== STEP 1: 음료 1개 선택 (drinks_photo 전용) ==================== -->
+    <section id="stage1" class="stage-panel pixel-box active">
+      <div class="stage-header">
+        <div>
+          <h2 class="stage-title">🥤 STEP 1. 음료 1개 선택 (HOT / ICE)</h2>
+          <p class="stage-desc">카테고리 탭을 누르고 원하는 음료의 <strong>[🧊 ICE]</strong> 또는 <strong>[🔥 HOT]</strong>을 눌러주세요!</p>
+        </div>
+        <button type="button" id="btnDrinkGacha" class="pixel-btn pixel-btn-gold pixel-btn-sm">
+          🎲 음료 가챠
+        </button>
+      </div>
+
+      <div class="drink-toolbar">
+        <input
+          type="search"
+          id="drinkSearchInput"
+          class="pixel-input"
+          placeholder="🔎 음료 검색 (예: 아메리카노, 딸기, 바닐라, 1리터, 유자...)"
+        />
+      </div>
+
+      <div id="drinkCategoryTabs" class="category-tabs" role="tablist" aria-label="음료 카테고리"></div>
+      <div id="drinkCategoryDesc" class="cat-sub-banner"></div>
+
+      <div id="drinkListContainer" class="drink-list-grid"></div>
+    </section>
+
+    <!-- ==================== STEP 2: 디저트 1순위 선택 ==================== -->
+    <section id="stage2" class="stage-panel pixel-box">
+      <div class="stage-header">
+        <div>
+          <h2 class="stage-title">🥇 STEP 2. 디저트 [1순위] 선택</h2>
+          <p class="stage-desc">
+            가장 먹고 싶은 <strong>1순위 디저트</strong>를 골라주세요! 6개 분류 중 하나를 누르면 상세 메뉴가 펼쳐집니다.
+          </p>
+        </div>
+        <button type="button" id="btnDessert1Gacha" class="pixel-btn pixel-btn-gold pixel-btn-sm">
+          🎲 1순위 가챠
+        </button>
+      </div>
+
+      <div id="dessert1ChestStack" class="dessert-category-stack"></div>
+    </section>
+
+    <!-- ==================== STEP 3: 디저트 2순위 선택 (품절 대비 · 중복 불가) ==================== -->
+    <section id="stage3" class="stage-panel pixel-box">
+      <div class="stage-header">
+        <div>
+          <h2 class="stage-title">🥈 STEP 3. 디저트 [2순위] 선택 (품절 대비)</h2>
+          <p class="stage-desc">
+            1순위 디저트가 품절일 때 대신 주문할 <strong>다른 메뉴(2순위)</strong>를 골라주세요!
+          </p>
+        </div>
+        <button type="button" id="btnDessert2Gacha" class="pixel-btn pixel-btn-gold pixel-btn-sm">
+          🎲 2순위 가챠
+        </button>
+      </div>
+
+      <div id="priority1SummaryBox" class="priority-notice-box"></div>
+
+      <div id="dessert2ChestStack" class="dessert-category-stack"></div>
+    </section>
+
+    <!-- ==================== STEP 4: 최종 주문서 확인 & 전송 ==================== -->
+    <section id="stage4" class="stage-panel pixel-box pixel-box-gold">
+      <div class="stage-header">
+        <div>
+          <h2 class="stage-title">📜 STEP 4. 최종 주문서 확인 &amp; 전송</h2>
+          <p class="stage-desc">음료 1개와 디저트 1·2순위를 확인하고 아래 등록 버튼을 눌러주세요!</p>
+        </div>
+      </div>
+
+      <div id="finalReceiptCard" class="receipt-card"></div>
+
+      <div style="margin-bottom: 14px;">
+        <label for="orderMemoInput" style="display:block; font-size:0.84rem; color:var(--accent-gold); margin-bottom:6px;">
+          💬 추가 요청 메모 (선택사항 · 디카페인 변경, 샷추가, 얼음 적게 등)
+        </label>
+        <input
+          type="text"
+          id="orderMemoInput"
+          class="pixel-input"
+          maxlength="50"
+          placeholder="예: 디카페인 변경, 샷 연하게, 얼음 적게 등 (없으면 비워두세요)"
+        />
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+        <button type="button" id="btnSubmitOrder" class="pixel-btn pixel-btn-mint" style="width:100%; font-size:1rem; padding:14px;">
+          🚀 주문 등록 완료하기! (실시간 현황판 전송)
+        </button>
+        <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+          <button type="button" id="btnCopyMyOrder" class="pixel-btn" style="flex: 1;">
+            📋 내 주문 카톡 복사
+          </button>
+          <a
+            id="baeminStep4Link"
+            href="https://s.baemin.com/bK000vefFFRgd"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="pixel-btn pixel-btn-baemin"
+            style="flex: 1;"
+          >
+            🛵 배민 앱 열기
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== 실시간 파티 주문 현황판 ==================== -->
+    <section id="partyBoardSection" class="board-section pixel-box">
+      <div class="stage-header">
+        <div>
+          <h2 class="stage-title">📊 실시간 주문 현황판 &amp; 배민 장바구니 합산</h2>
+          <p class="stage-desc">팀원들의 음료·디저트(1·2순위)가 실시간 취합됩니다. 총무님은 [배민 합산표 복사]를 눌러보세요!</p>
+        </div>
+        <div style="display:flex; flex-wrap:wrap; align-items:center; gap:6px; width:100%;">
+          <span id="syncStatusPill" class="sync-pill local">🟡 로컬 저장 모드</span>
+          <button type="button" id="btnRefreshBoard" class="pixel-btn pixel-btn-sm">🔄 새로고침</button>
+          <button type="button" id="btnCopyBaeminSummary" class="pixel-btn pixel-btn-sm pixel-btn-gold" style="margin-left:auto;">
+            📋 배민 합산표 복사
+          </button>
+        </div>
+      </div>
+
+      <div style="display:flex; flex-wrap:wrap; justify-content:space-between; gap:8px; font-size:0.84rem; color:var(--text-sub);">
+        <span>👥 참여 인원: <strong id="totalCountLabel" style="color:var(--accent-green);">0명</strong></span>
+        <span>💰 예상 합계(1순위 기준): <strong id="totalPriceLabel" style="color:var(--accent-gold);">0원</strong></span>
+      </div>
+
+      <div class="summary-grid">
+        <div class="summary-card">
+          <h4>🥤 음료 메뉴별 합계</h4>
+          <ul id="drinkSummaryList" class="summary-list">
+            <li style="color:var(--text-muted);">아직 등록된 주문이 없습니다.</li>
+          </ul>
+        </div>
+        <div class="summary-card">
+          <h4>🥇 디저트 1순위 합계</h4>
+          <ul id="dessertSummaryList" class="summary-list">
+            <li style="color:var(--text-muted);">아직 등록된 주문이 없습니다.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div id="memberOrderList" class="member-order-list"></div>
+    </section>
+  </div>
+
+  <!-- ==================== 모바일 하단 고정 엄지 네비게이션 바 ==================== -->
+  <div id="bottomActionDock" class="bottom-action-dock">
+    <div class="dock-inner">
+      <button type="button" id="btnDockPrev" class="pixel-btn dock-prev-btn">
+        ◀ 이전
+      </button>
+      <button type="button" id="btnDockNext" class="pixel-btn pixel-btn-pink dock-next-btn">
+        다음: 디저트 1순위 고르기 ▶
+      </button>
+    </div>
+  </div>
+
+  <!-- ==================== 필수 모달 0: 최초 이름 입력 팝업창 ==================== -->
+  <div id="nameEntryModal" class="modal-backdrop open" role="dialog" aria-modal="true" aria-labelledby="welcomeModalTitle">
+    <div class="modal-window pixel-box pixel-box-gold" style="text-align:center;">
+      <div style="font-size:2.1rem; margin-bottom:4px;">🍓🥤</div>
+      <h2 id="welcomeModalTitle" class="stage-title" style="font-size:1.08rem;">
+        디저트테이블냠냠&amp;과일 마곡점
+      </h2>
+      <p style="font-size:0.8rem; color:var(--text-sub); margin-top:3px;">
+        8-BIT 도트 메뉴 선정 퀘스트에 오신 것을 환영합니다!
+      </p>
+
+      <a
+        id="baeminPopupLink"
+        href="https://s.baemin.com/bK000vefFFRgd"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="pixel-btn pixel-btn-baemin pixel-btn-sm"
+        style="width:100%; margin-top:12px;"
+      >
+        🛵 배달의민족 앱에서 매장·메뉴 사진 미리보기 ▶
+      </a>
+
+      <ul class="welcome-rules-box">
+        <li>👤 <strong>1단계</strong>: 주문자 이름을 입력해야 다음으로 넘어갑니다.</li>
+        <li>🥤 <strong>2단계</strong>: <strong>음료 1개</strong>(HOT / ICE)를 객관식으로 선택합니다.</li>
+        <li>🍓 <strong>3단계</strong>: 품절 대비를 위해 <strong>디저트 1순위 &amp; 2순위</strong>(서로 다른 메뉴)를 선택합니다.</li>
+      </ul>
+
+      <div style="text-align:left; margin-bottom:12px;">
+        <label for="popupNameInput" style="display:block; font-size:0.85rem; color:var(--accent-gold); margin-bottom:6px;">
+          ▼ 주문자 이름을 입력해 주세요 (필수)
+        </label>
+        <input
+          type="text"
+          id="popupNameInput"
+          class="pixel-input"
+          maxlength="24"
+          autocomplete="name"
+          placeholder="예: 홍길동 (재입력 시 기존 주문 수정 가능)"
+        />
+      </div>
+
+      <button type="button" id="btnConfirmPopupName" class="pixel-btn pixel-btn-pink" style="width:100%; font-size:1rem; padding:13px;">
+        ⚔️ 이름 입력 완료! 메뉴 고르러 가기 ▶
+      </button>
+    </div>
+  </div>
+
+  <!-- ==================== 모달 1: 도트 가챠 룰렛 ==================== -->
+  <div id="gachaModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="gachaModalTitle">
+    <div class="modal-window pixel-box pixel-box-gold" style="text-align:center;">
+      <h3 id="gachaModalTitle" class="stage-title" style="margin-bottom:6px;">🎲 냠냠 도트 가챠 머신</h3>
+      <p id="gachaSubDesc" class="stage-desc" style="margin-bottom:12px;">운명의 추천 메뉴를 뽑는 중...</p>
+
+      <div
+        id="gachaDisplayBox"
+        style="background:#140e21; border:3px solid var(--accent-pink); padding:18px 12px; margin-bottom:14px; min-height:92px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px;"
+      >
+        <div id="gachaResultIcon" style="font-size:1.9rem;">🎰</div>
+        <div id="gachaResultTitle" style="font-size:1rem; font-weight:bold; color:var(--accent-gold);">두구두구...</div>
+        <div id="gachaResultMeta" style="font-size:0.78rem; color:var(--text-sub);"></div>
+      </div>
+
+      <div style="display:flex; flex-wrap:wrap; gap:8px; justify-content:center;">
+        <button type="button" id="btnApplyGacha" class="pixel-btn pixel-btn-mint" style="flex:1;">✨ 장착하기</button>
+        <button type="button" id="btnRerollGacha" class="pixel-btn pixel-btn-gold">🎲 다시 뽑기</button>
+        <button type="button" id="btnCloseGacha" class="pixel-btn">닫기</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== 모달 2: Google 스프레드시트 실시간 연동 설정 ==================== -->
+  <div id="sheetSetupModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="sheetModalTitle">
+    <div class="modal-window pixel-box">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+        <h3 id="sheetModalTitle" class="stage-title">⚙️ Google 스프레드시트 실시간 연동</h3>
+        <button type="button" id="btnCloseSheetModal" class="pixel-btn pixel-btn-sm">✕ 닫기</button>
+      </div>
+
+      <p style="font-size:0.8rem; color:var(--text-sub); margin-bottom:12px;">
+        팀원들이 모바일에서 선택했을 때 한 시트에 실시간 자동 집계되도록 Google Apps Script 웹 앱 URL을 연결합니다.
+      </p>
+
+      <label for="sheetUrlInput" style="display:block; font-size:0.8rem; color:var(--accent-gold); margin-bottom:5px;">
+        1️⃣ 배포된 Google Apps Script 웹 앱 URL (<code>.../exec</code>)
+      </label>
+      <input
+        type="url"
+        id="sheetUrlInput"
+        class="pixel-input"
+        placeholder="https://script.google.com/macros/s/AKfycb.../exec"
+      />
+
+      <div style="display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; margin-bottom:16px;">
+        <button type="button" id="btnSaveSheetUrl" class="pixel-btn pixel-btn-mint pixel-btn-sm" style="flex:1;">
+          💾 저장 &amp; 연결 테스트
+        </button>
+        <button type="button" id="btnCopyShareLink" class="pixel-btn pixel-btn-gold pixel-btn-sm" style="width:100%;">
+          🔗 팀원 배포용 자동연동 링크 복사 (카톡 공유용)
+        </button>
+        <button type="button" id="btnClearSheetUrl" class="pixel-btn pixel-btn-sm">
+          초기화
+        </button>
+      </div>
+
+      <div style="border-top:2px dashed #4a396b; padding-top:12px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:6px; margin-bottom:6px;">
+          <span style="font-size:0.82rem; color:var(--accent-green); font-weight:bold;">
+            2️⃣ 3분 시트 연동 가이드
+          </span>
+          <button type="button" id="btnCopyAppsScriptCode" class="pixel-btn pixel-btn-pink pixel-btn-sm">
+            📜 Apps Script 복사
+          </button>
+        </div>
+        <ol style="font-size:0.76rem; color:var(--text-sub); padding-left:18px; line-height:1.6;">
+          <li>새 구글 시트(<strong>sheets.new</strong>) → <strong>[확장 프로그램] &gt; [Apps Script]</strong></li>
+          <li>위 <strong>[📜 Apps Script 복사]</strong> 코드 붙여넣기 후 저장</li>
+          <li><strong>[배포] &gt; [새 배포]</strong> → 유형: <strong>웹 앱</strong>, 실행: <strong>나(Me)</strong>, 액세스: <strong>모든 사용자(Anyone)</strong> 배포</li>
+          <li>발급된 <code>.../exec</code> URL을 위 칸에 넣고 <strong>[🔗 자동연동 링크 복사]</strong> 또는 <code>config.js</code>에 입력!</li>
+        </ol>
+        <pre id="appsScriptPreview" class="code-preview"></pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- 하단 픽셀 토스트 알림 -->
+  <div id="pixelToast" class="pixel-toast" role="status" aria-live="polite"></div>
+
+  <script src="./config.js"></script>
+  <script src="./menu-data.js"></script>
+  <script src="./pixel-scene.js"></script>
+  <script src="./app.js"></script>
+</body>
+</html>

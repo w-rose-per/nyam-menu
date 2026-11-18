@@ -15,7 +15,7 @@ window.NYAM_CONFIG = {
   STORE_ADDRESS: "서울 강서구 공항대로 220 1층 112호 (마곡점)",
 
   // 👇 여기에 Google Apps Script 웹 앱 URL(/exec)을 입력하면 전체 팀원에게 즉시 연동됩니다.
-  GOOGLE_SCRIPT_URL: "",
+  GOOGLE_SCRIPT_URL: "https://script.google.com/macros/s/AKfycbyk4sy8DtU_MiVrv_LOn0d0QfpMBhF45B_6skFVbys3KpUYHFePk2BWJk_opVpBkxUq-g/exec",
 
   // 현황판 자동 새로고침 주기 (밀리초, 기본 15초)
   POLL_INTERVAL_MS: 15000,

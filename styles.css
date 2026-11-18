@@ -550,27 +550,24 @@ textarea {
 }
 
 .category-tabs {
-  display: flex;
-  overflow-x: auto;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
   gap: 6px;
-  padding-bottom: 6px;
   margin-bottom: 12px;
-  scrollbar-width: thin;
-  -webkit-overflow-scrolling: touch;
 }
 
 .cat-tab {
-  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 6px;
   min-height: 42px;
+  padding: 8px 10px;
+  font-size: 0.82rem;
   background: var(--bg-card);
   border: 2px solid #4c3b6e;
-  padding: 7px 11px;
   cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 0.83rem;
-  white-space: nowrap;
+  text-align: left;
 }
 
 .cat-tab.active {
@@ -1184,6 +1181,10 @@ textarea {
   }
 
   .inventory-bar {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  .category-tabs {
     grid-template-columns: repeat(4, 1fr);
   }
 }

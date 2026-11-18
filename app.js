@@ -934,7 +934,7 @@ function doPost(e) {
               id="${fieldId}"
               class="pixel-input"
               maxlength="40"
-              placeholder="예: 악마의 초코케이크 1조각, 생과일 꿀그릭, 두바이쫀득쿠키 등"
+              placeholder="예: 두바이쫀득쿠키, 밀키롤, 초코롤, 컵화채 등"
               value="${escapeHtml(shownText)}"
             />
             <div style="font-size:0.73rem; color:var(--text-muted); margin-top:8px;">

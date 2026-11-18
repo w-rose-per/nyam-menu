@@ -229,7 +229,7 @@ window.NYAM_MENU = {
     {
       id: "cup_fruit",
       name: "컵과일",
-      fullTitle: "신선 제철 컵과일 & 화채",
+      fullTitle: "신선 제철 컵과일",
       icon: "🍍",
       statTag: "상큼충전",
       subtitle: "당일 손질한 고당도 제철 생과일 구성",
@@ -250,20 +250,6 @@ window.NYAM_MENU = {
           price: 5500,
           optionNote: "넉넉한 사이즈업 과일 구성",
           badge: "인기"
-        },
-        {
-          id: "fruit_lunchbox",
-          name: "과일도시락 (4~5종)",
-          baeminLabel: "과일도시락",
-          price: 6500,
-          optionNote: "프리미엄 도시락 용기 구성"
-        },
-        {
-          id: "cup_hwachae",
-          name: "시원달콤 컵화채",
-          baeminLabel: "컵화채",
-          price: 5500,
-          optionNote: "달콤 시원한 과일 화채"
         }
       ]
     },
@@ -357,22 +343,13 @@ window.NYAM_MENU = {
       fullTitle: "기타 디저트 직접 입력 (주관식)",
       icon: "✏️",
       statTag: "직접입력",
-      subtitle: "케이크·롤·그릭요거트·샌드위치 등 배민 앱의 다른 메뉴 작성",
+      subtitle: "두바이쫀득쿠키·밀키롤·초코롤·컵화채 등 기타 메뉴 직접 작성",
       type: "custom",
       suggestions: [
-        "악마의 초코케이크 (1조각)",
-        "뉴욕치즈케익",
-        "밀크 크레이프케익",
-        "쇼콜라 크레이프케익",
         "두바이쫀득쿠키",
-        "생과일 꿀그릭요거트",
-        "플레인 꿀그릭요거트",
-        "애플망고 꿀그릭",
-        "아사이볼",
         "밀키롤",
         "초코롤",
-        "햄치즈샌드위치",
-        "에그마요샌드위치"
+        "컵화채"
       ]
     },
     {

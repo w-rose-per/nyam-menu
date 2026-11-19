@@ -20,6 +20,12 @@
 const ORDER_SHEET_NAME = "주문내역";
 const SUMMARY_SHEET_NAME = "메뉴별집계";
 
+function refreshSummaryNow() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = getOrInitOrderSheet(ss);
+  rebuildSummarySheet(ss, readAllOrders(sheet));
+}
+
 function getOrInitOrderSheet(ss) {
   let sheet = ss.getSheetByName(ORDER_SHEET_NAME);
   if (!sheet) {
@@ -57,14 +63,8 @@ function rebuildSummarySheet(ss, orders) {
   }
   sheet.clear();
 
-  const activeOrders = [];
-  const deletedOrders = [];
-  orders.forEach(function (o) {
-    if (/^\[삭제됨/.test(String(o.memo || "").trim())) {
-      deletedOrders.push(o);
-    } else {
-      activeOrders.push(o);
-    }
+  const activeOrders = orders.filter(function (o) {
+    return !/^\[삭제됨/.test(String(o.memo || "").trim());
   });
 
   const drinkCounts = {};
@@ -112,18 +112,6 @@ function rebuildSummarySheet(ss, orders) {
       o.baeminDessert2Label || o.dessert2Display || "선택안함"
     ]);
   });
-
-  if (deletedOrders.length > 0) {
-    rows.push(["", "", ""]);
-    rows.push(["🗑️ 삭제된 주문 이력 (시트 보존)", "기존 선택 음료", "기존 선택 1순위 / 비고"]);
-    deletedOrders.forEach(function (o) {
-      rows.push([
-        o.name,
-        o.drinkDisplay || "-",
-        (o.dessert1Display || "선택안함") + " (" + o.memo + ")"
-      ]);
-    });
-  }
 
   sheet.getRange(1, 1, rows.length, 3).setValues(rows);
   sheet.getRange(1, 1, 1, 3).setBackground("#ff5c8a").setFontColor("#ffffff").setFontWeight("bold");

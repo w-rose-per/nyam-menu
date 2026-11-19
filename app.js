@@ -39,9 +39,14 @@ function rebuildSummarySheet(ss, orders) {
   let sheet = ss.getSheetByName(SUMMARY_SHEET_NAME);
   if (!sheet) sheet = ss.insertSheet(SUMMARY_SHEET_NAME);
   sheet.clear();
+  const activeOrders = [], deletedOrders = [];
+  orders.forEach(function (o) {
+    if (/^\\[삭제됨/.test(String(o.memo || "").trim())) deletedOrders.push(o);
+    else activeOrders.push(o);
+  });
   const drinkCounts = {}, dessert1Counts = {};
   let totalPrice = 0;
-  orders.forEach(function (o) {
+  activeOrders.forEach(function (o) {
     const dKey = o.drinkDisplay || "미선택";
     drinkCounts[dKey] = (drinkCounts[dKey] || 0) + 1;
     const ds1Key = o.baeminDessert1Label || o.dessert1Display || "선택안함";
@@ -50,7 +55,7 @@ function rebuildSummarySheet(ss, orders) {
   });
   const rows = [
     ["[디저트테이블냠냠&과일 마곡점] 실시간 주문 합산표", "", ""],
-    ["총 참여 인원", orders.length + "명", "예상 총액(1순위 기준): " + totalPrice.toLocaleString() + "원"],
+    ["총 참여 인원", activeOrders.length + "명", "예상 총액(1순위 기준): " + totalPrice.toLocaleString() + "원"],
     ["배민 매장 링크", "https://s.baemin.com/bK000vefFFRgd", ""],
     ["", "", ""],
     ["🥤 음료 메뉴 (온도 포함)", "수량", "비고"]
@@ -63,9 +68,15 @@ function rebuildSummarySheet(ss, orders) {
     rows.push([k, dessert1Counts[k], k === "선택안함" ? "디저트 패스" : "기본 주문"]);
   });
   rows.push(["", "", ""], ["🥈 품절 시 개인별 2순위 대체 가이드", "1순위 메뉴", "품절 시 2순위 대체 메뉴"]);
-  orders.forEach(function(o){
+  activeOrders.forEach(function(o){
     rows.push([o.name, o.baeminDessert1Label || o.dessert1Display || "선택안함", o.baeminDessert2Label || o.dessert2Display || "선택안함"]);
   });
+  if (deletedOrders.length > 0) {
+    rows.push(["", "", ""], ["🗑️ 삭제된 주문 이력 (시트 보존)", "기존 선택 음료", "기존 선택 1순위 / 비고"]);
+    deletedOrders.forEach(function(o){
+      rows.push([o.name, o.drinkDisplay || "-", (o.dessert1Display || "선택안함") + " (" + o.memo + ")"]);
+    });
+  }
   sheet.getRange(1, 1, rows.length, 3).setValues(rows);
   sheet.autoResizeColumns(1, 3);
 }
@@ -113,11 +124,16 @@ function doPost(e) {
         if (String(names[i][0] || "").trim() === name) { rowIdx = i + 2; break; }
       }
     }
-    if (body.action === "delete") {
-      if (rowIdx > 1) sheet.deleteRow(rowIdx);
+    if (body.action === "delete" || body.action === "soft_delete") {
+      if (rowIdx > 1) {
+        const curMemo = String(sheet.getRange(rowIdx, 10).getValue() || "").replace(/^\\[삭제됨[^\\]]*\\]\\s*/, "").trim();
+        const delMemo = curMemo ? "[삭제됨 " + nowStr + "] " + curMemo : "[삭제됨 " + nowStr + "]";
+        sheet.getRange(rowIdx, 10).setValue(delMemo);
+        sheet.getRange(rowIdx, 12).setValue(nowStr);
+      }
       const afterDel = readAllOrders(sheet);
       rebuildSummarySheet(ss, afterDel);
-      return jsonResponse({ ok: true, mode: "deleted", orders: afterDel });
+      return jsonResponse({ ok: true, mode: "soft_deleted", orders: afterDel });
     }
     const row = [
       name, String(body.drinkDisplay||""), String(body.dessert1Display||"선택안함"), String(body.dessert2Display||"선택안함"),
@@ -179,6 +195,15 @@ function doPost(e) {
   function formatWon(num) {
     const n = Number(num || 0);
     return n > 0 ? n.toLocaleString("ko-KR") + "원" : "0원";
+  }
+
+  function isDeletedOrder(o) {
+    if (!o) return true;
+    return o.deleted === true || /^\[삭제됨/.test(String(o.memo || "").trim());
+  }
+
+  function getActiveOrders() {
+    return (state.orders || []).filter((o) => !isDeletedOrder(o));
   }
 
   function normalizeMenuKey(str) {
@@ -370,7 +395,7 @@ function doPost(e) {
   }
 
   function tryRestoreExistingOrder(name) {
-    const existing = state.orders.find((o) => o.name === name);
+    const existing = getActiveOrders().find((o) => o.name === name);
     if (!existing) return false;
 
     if (existing.drinkDisplay) {
@@ -1363,39 +1388,62 @@ function doPost(e) {
   }
 
   async function deleteOrderByName(targetName) {
-    if (!confirm(`[${targetName}]님의 주문 내역을 삭제할까요?`)) return;
+    if (!confirm(`[${targetName}]님의 주문을 현황판에서 삭제할까요?\n(구글 시트에는 [삭제됨] 기록으로 남아 보존됩니다)`)) return;
+
+    const existingOrder =
+      getActiveOrders().find((o) => o.name === targetName) ||
+      (state.orders || []).find((o) => o.name === targetName) ||
+      { name: targetName };
+    const cleanMemo = String(existingOrder.memo || "").replace(/^\[삭제됨[^\]]*\]\s*/, "").trim();
+    const softDeleteMemo = cleanMemo ? `[삭제됨] ${cleanMemo}` : "[삭제됨]";
+    const softDeletePayload = {
+      action: "soft_delete",
+      name: targetName,
+      drinkCategory: existingOrder.drinkCategory || "",
+      drinkName: existingOrder.drinkName || "",
+      drinkTemp: existingOrder.drinkTemp || "",
+      drinkDisplay: existingOrder.drinkDisplay || "",
+      dessert1Display: existingOrder.dessert1Display || existingOrder.dessertDisplay || "선택안함",
+      dessert2Display: existingOrder.dessert2Display || "선택안함",
+      baeminDessert1Label: existingOrder.baeminDessert1Label || existingOrder.dessert1Display || "선택안함",
+      baeminDessert2Label: existingOrder.baeminDessert2Label || existingOrder.dessert2Display || "선택안함",
+      memo: softDeleteMemo,
+      estimatedPrice: Number(existingOrder.estimatedPrice || 0)
+    };
 
     if (state.sheetUrl) {
       try {
         const res = await fetch(state.sheetUrl, {
           method: "POST",
           headers: { "Content-Type": "text/plain;charset=utf-8" },
-          body: JSON.stringify({ action: "delete", name: targetName })
+          body: JSON.stringify(softDeletePayload)
         });
         const data = await res.json();
         if (data && data.ok && Array.isArray(data.orders)) {
           state.orders = data.orders;
           saveLocalOrders(state.orders);
           renderPartyBoard();
-          showToast(`🗑️ [${targetName}]님의 주문을 삭제했습니다.`);
+          showToast(`🗑️ [${targetName}]님의 주문을 현황판에서 삭제했습니다. (시트에는 [삭제됨]으로 기록 유지)`);
           return;
         }
       } catch (_) {
-        showToast("⚠️ 시트 삭제 중 오류가 발생했습니다.");
+        showToast("⚠️ 시트 삭제 처리 중 오류가 발생했습니다.");
         return;
       }
     }
 
-    const filtered = loadLocalOrders().filter((o) => o.name !== targetName);
-    state.orders = filtered;
-    saveLocalOrders(filtered);
+    const updatedLocal = loadLocalOrders().map((o) =>
+      o.name === targetName ? Object.assign({}, o, { memo: softDeleteMemo, deleted: true }) : o
+    );
+    state.orders = updatedLocal;
+    saveLocalOrders(updatedLocal);
     renderPartyBoard();
-    showToast(`🗑️ [${targetName}]님의 주문을 삭제했습니다.`);
+    showToast(`🗑️ [${targetName}]님의 주문을 현황판에서 삭제했습니다. (시트에는 [삭제됨]으로 기록 유지)`);
   }
 
   // ==================== 실시간 현황판 (모바일 친화 카드 리스트) ====================
   function renderPartyBoard() {
-    const orders = state.orders || [];
+    const orders = getActiveOrders();
     const hudCount = document.getElementById("hudOrderCount");
     const totalCount = document.getElementById("totalCountLabel");
     const totalPriceEl = document.getElementById("totalPriceLabel");
@@ -1563,7 +1611,7 @@ function doPost(e) {
   }
 
   function copyBaeminSummaryText() {
-    const orders = state.orders || [];
+    const orders = getActiveOrders();
     if (orders.length === 0) {
       sfx.playError();
       showToast("⚠️ 아직 등록된 주문이 없습니다!");

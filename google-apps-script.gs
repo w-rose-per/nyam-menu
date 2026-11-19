@@ -57,11 +57,21 @@ function rebuildSummarySheet(ss, orders) {
   }
   sheet.clear();
 
+  const activeOrders = [];
+  const deletedOrders = [];
+  orders.forEach(function (o) {
+    if (/^\[삭제됨/.test(String(o.memo || "").trim())) {
+      deletedOrders.push(o);
+    } else {
+      activeOrders.push(o);
+    }
+  });
+
   const drinkCounts = {};
   const dessert1Counts = {};
   let totalPrice = 0;
 
-  orders.forEach(function (o) {
+  activeOrders.forEach(function (o) {
     const dKey = o.drinkDisplay || "미선택";
     drinkCounts[dKey] = (drinkCounts[dKey] || 0) + 1;
 
@@ -73,7 +83,7 @@ function rebuildSummarySheet(ss, orders) {
 
   const rows = [];
   rows.push(["[디저트테이블냠냠&과일 마곡점] 실시간 주문 합산표", "", ""]);
-  rows.push(["총 참여 인원", orders.length + "명", "예상 총액(1순위 기준): " + totalPrice.toLocaleString() + "원"]);
+  rows.push(["총 참여 인원", activeOrders.length + "명", "예상 총액(1순위 기준): " + totalPrice.toLocaleString() + "원"]);
   rows.push(["배민 매장 링크", "https://s.baemin.com/bK000vefFFRgd", ""]);
   rows.push(["", "", ""]);
   rows.push(["🥤 음료 메뉴 (온도 포함)", "수량", "비고"]);
@@ -95,13 +105,25 @@ function rebuildSummarySheet(ss, orders) {
 
   rows.push(["", "", ""]);
   rows.push(["🥈 품절 시 개인별 2순위 대체 가이드", "1순위 메뉴", "품절 시 2순위 대체 메뉴"]);
-  orders.forEach(function (o) {
+  activeOrders.forEach(function (o) {
     rows.push([
       o.name,
       o.baeminDessert1Label || o.dessert1Display || "선택안함",
       o.baeminDessert2Label || o.dessert2Display || "선택안함"
     ]);
   });
+
+  if (deletedOrders.length > 0) {
+    rows.push(["", "", ""]);
+    rows.push(["🗑️ 삭제된 주문 이력 (시트 보존)", "기존 선택 음료", "기존 선택 1순위 / 비고"]);
+    deletedOrders.forEach(function (o) {
+      rows.push([
+        o.name,
+        o.drinkDisplay || "-",
+        (o.dessert1Display || "선택안함") + " (" + o.memo + ")"
+      ]);
+    });
+  }
 
   sheet.getRange(1, 1, rows.length, 3).setValues(rows);
   sheet.getRange(1, 1, 1, 3).setBackground("#ff5c8a").setFontColor("#ffffff").setFontWeight("bold");
@@ -186,13 +208,20 @@ function doPost(e) {
       }
     }
 
-    if (action === "delete") {
+    if (action === "delete" || action === "soft_delete") {
       if (existingRowIndex > 1) {
-        sheet.deleteRow(existingRowIndex);
+        const currentMemo = String(sheet.getRange(existingRowIndex, 10).getValue() || "")
+          .replace(/^\[삭제됨[^\]]*\]\s*/, "")
+          .trim();
+        const deletedMemo = currentMemo
+          ? "[삭제됨 " + nowStr + "] " + currentMemo
+          : "[삭제됨 " + nowStr + "]";
+        sheet.getRange(existingRowIndex, 10).setValue(deletedMemo);
+        sheet.getRange(existingRowIndex, 12).setValue(nowStr);
       }
       const updatedOrders = readAllOrders(sheet);
       rebuildSummarySheet(ss, updatedOrders);
-      return jsonResponse({ ok: true, mode: "deleted", orders: updatedOrders });
+      return jsonResponse({ ok: true, mode: "soft_deleted", orders: updatedOrders });
     }
 
     const rowData = [
